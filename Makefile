@@ -1,12 +1,12 @@
 SHELL = sh
 
 # ATTENTION: path to SUNDIALS installation directory
-prefix     = /path/to/sundials/INSTDIR
+prefix     = /data/project/general/ans/COD/SUNDIALS/INSTDIR
 includedir = ${prefix}/fortran
 libdir     = ${prefix}/lib64
 
 # ATTENTION: path to FORTRAN compiler
-F90      = /path/to/gfortran
+F90      = /opt/psi/Programming/gcc/13.1.0/bin/gfortran
 F90FLAGS = -O3 
 F90LIBS  =  -lm
 
@@ -18,8 +18,8 @@ LINKFLAGS = -Wl,-rpath,$(libdir)
 
 # ------------------------------------------------------------------------------
 
-FILES =  FRED
-FILES_DEPENDENCIES = globals DAE
+FILES =  main
+FILES_DEPENDENCIES = globals FRED
 
 OBJECTS = ${FILES:=.o}
 OBJECTS_DEPENDENCIES = ${FILES_DEPENDENCIES:=.o}
@@ -35,6 +35,6 @@ OBJECTS_DEPENDENCIES = ${FILES_DEPENDENCIES:=.o}
 
 all: ${OBJECTS_DEPENDENCIES} ${OBJECTS}
 	@for i in ${FILES} ; do \
-	  echo "${F90} -o $${i} $${i}.o ${OBJECTS_DEPENDENCIES} ${F90FLAGS} ${INCLUDES} -L${libdir} ${LIBRARIES} ${LINKFLAGS}" ; \
-	  ${F90} -o $${i} $${i}.o ${OBJECTS_DEPENDENCIES} ${F90FLAGS} ${INCLUDES} -L${libdir} ${LIBRARIES} ${LINKFLAGS} ; \
+	  echo "${F90} -o FRED $${i}.o ${OBJECTS_DEPENDENCIES} ${F90FLAGS} ${INCLUDES} -L${libdir} ${LIBRARIES} ${LINKFLAGS}" ; \
+	  ${F90} -o FRED $${i}.o ${OBJECTS_DEPENDENCIES} ${F90FLAGS} ${INCLUDES} -L${libdir} ${LIBRARIES} ${LINKFLAGS} ; \
 	done
