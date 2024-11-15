@@ -14,7 +14,7 @@ def main():
     #number of clad radial nodes
     nc = 3
 
-    times, timed, fggenv, fgrelv, fgrelp, gpres, z, tfin, tfout, pfc, rfo, rci, bup, qv, gap, hgap, tcin, tcout, esw, et, sigh, sigr, sigz = [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], []
+    times, timed, fggenv, fgrelv, fgrelp, gpres, z, tfin, tfout, pfc, rfo, rci, bup, qv, gap, hgap, tcin, tcout, esw, et, sigh, sigr, sigz, ech, ecr, ecz = [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], []
     
     #list of outfrd files (could be not consequent)
     flist = sorted(glob.glob('out*'), key=os.path.getmtime)
@@ -44,6 +44,9 @@ def main():
                 if line[:5] == 'sig h' and int(line[24:27]) == jz : sigh.append([float(s) for s in line[27:].split()])
                 if line[:5] == 'sig r' and int(line[24:27]) == jz : sigr.append([float(s) for s in line[27:].split()])
                 if line[:5] == 'sig z' and int(line[24:27]) == jz : sigz.append([float(s) for s in line[27:].split()])
+                if line[:11] == 'eps h creep' and int(line[24:27]) == jz : ech.append([float(s) for s in line[27:].split()])
+                if line[:11] == 'eps r creep' and int(line[24:27]) == jz : ecr.append([float(s) for s in line[27:].split()])
+                if line[:11] == 'eps z creep' and int(line[24:27]) == jz : ecz.append([float(s) for s in line[27:].split()])
     prs = Presentation()
 
     #fission gas generation and release
@@ -225,7 +228,52 @@ def main():
     add_slide(prs)
     plt.close()
 
-    prs.save('plots-time.pptx')
+    #ech
+    plt.figure()
+    ech = np.transpose(np.array(ech))
+    plt.plot(timed, ech[0], color='red', label='Fuel center')
+    plt.plot(timed, ech[nf-1], color='blue', label='Fuel surface')
+    plt.plot(timed, ech[nf], color='black', label='Clad inner surface')
+    plt.plot(timed, ech[nf+nc-1], color='green', label='Clad outer surface')
+    plt.xlabel("Time (d)")
+    plt.ylabel("Hoop creep strain (%) at " + str(z[jz]*1000.0) + " mm")
+    plt.grid()
+    plt.legend()
+    plt.savefig('plot.png', dpi=300, bbox_inches='tight')
+    add_slide(prs)
+    plt.close()
+
+    #ecr
+    plt.figure()
+    ecr = np.transpose(np.array(ecr))
+    plt.plot(timed, ecr[0], color='red', label='Fuel center')
+    plt.plot(timed, ecr[nf-1], color='blue', label='Fuel surface')
+    plt.plot(timed, ecr[nf], color='black', label='Clad inner surface')
+    plt.plot(timed, ecr[nf+nc-1], color='green', label='Clad outer surface')
+    plt.xlabel("Time (d)")
+    plt.ylabel("Radial creep strain (%) at " + str(z[jz]*1000.0) + " mm")
+    plt.grid()
+    plt.legend()
+    plt.savefig('plot.png', dpi=300, bbox_inches='tight')
+    add_slide(prs)
+    plt.close()
+
+    #ecz
+    plt.figure()
+    ecz = np.transpose(np.array(ecz))
+    plt.plot(timed, ecz[0], color='red', label='Fuel center')
+    plt.plot(timed, ecz[nf-1], color='blue', label='Fuel surface')
+    plt.plot(timed, ecz[nf], color='black', label='Clad inner surface')
+    plt.plot(timed, ecz[nf+nc-1], color='green', label='Clad outer surface')
+    plt.xlabel("Time (d)")
+    plt.ylabel("Axial creep strain (%) at " + str(z[jz]*1000.0) + " mm")
+    plt.grid()
+    plt.legend()
+    plt.savefig('plot.png', dpi=300, bbox_inches='tight')
+    add_slide(prs)
+    plt.close()
+
+    prs.save('_plots-time.pptx')
     
     prs = Presentation()
 
@@ -394,8 +442,106 @@ def main():
     plt.savefig('plot.png', dpi=300, bbox_inches='tight')
     add_slide(prs)
     plt.close()
-    
-    prs.save('plots-bup.pptx')
+
+    #ecr
+    plt.figure()
+    plt.plot(bup[jz], ecr[0], color='red', label='Fuel center')
+    plt.plot(bup[jz], ecr[nf-1], color='blue', label='Fuel surface')
+    plt.plot(bup[jz], ecr[nf], color='black', label='Clad inner surface')
+    plt.plot(bup[jz], ecr[nf+nc-1], color='green', label='Clad outer surface')
+    plt.xlabel("Burnup (MWd)")
+    plt.ylabel("Radial creep strain (%) at " + str(z[jz]*1000.0) + " mm")
+    plt.grid()
+    plt.legend()
+    plt.savefig('plot.png', dpi=300, bbox_inches='tight')
+    add_slide(prs)
+    plt.close()
+
+    #ech
+    plt.figure()
+    plt.plot(bup[jz], ech[0], color='red', label='Fuel center')
+    plt.plot(bup[jz], ech[nf-1], color='blue', label='Fuel surface')
+    plt.plot(bup[jz], ech[nf], color='black', label='Clad inner surface')
+    plt.plot(bup[jz], ech[nf+nc-1], color='green', label='Clad outer surface')
+    plt.xlabel("Burnup (MWd)")
+    plt.ylabel("Hoop creep strain (%) at " + str(z[jz]*1000.0) + " mm")
+    plt.grid()
+    plt.legend()
+    plt.savefig('plot.png', dpi=300, bbox_inches='tight')
+    add_slide(prs)
+    plt.close()
+
+    #ecz
+    plt.figure()
+    plt.plot(bup[jz], ecz[0], color='red', label='Fuel center')
+    plt.plot(bup[jz], ecz[nf-1], color='blue', label='Fuel surface')
+    plt.plot(bup[jz], ecz[nf], color='black', label='Clad inner surface')
+    plt.plot(bup[jz], ecz[nf+nc-1], color='green', label='Clad outer surface')
+    plt.xlabel("Burnup (MWd)")
+    plt.ylabel("Axial creep strain (%) at " + str(z[jz]*1000.0) + " mm")
+    plt.grid()
+    plt.legend()
+    plt.savefig('plot.png', dpi=300, bbox_inches='tight')
+    add_slide(prs)
+    plt.close()
+
+    prs.save('_plots-bup.pptx')
+
+    file = 'postprocess.dat'
+    with open(file, 'w') as f:
+        f.write('time(s)         ')
+        f.write('time(d)         ')
+        f.write('fggen(cm3)      ')
+        f.write('fgrel(cm3)      ')
+        f.write('fgrel(%)        ')
+        f.write('gpres(MPa)      ')
+        f.write('tfin(K)         ')
+        f.write('tfout(K)        ')
+        f.write('tcin(K)         ')
+        f.write('tcout(K)        ')
+        f.write('pfc(MPa)        ')
+        f.write('rfo(m)          ')
+        f.write('rci(m)          ')
+        f.write('bup(MWd/kg)     ')
+        f.write('qv(W/m3)        ')
+        f.write('gap(m)          ')
+        f.write('hgap(W/m2K)     ')
+        f.write('eps_swell(%)    ')
+        f.write('eps_th(%)       ')
+        f.write('sig_h(MPa)      ')
+        f.write('sig_r(MPa)      ')
+        f.write('sig_z(MPa)      ')
+        f.write('eps_h_creep(%)  ')
+        f.write('eps_r_creep(%)  ')
+        f.write('eps_z_creep(%)  ')
+        f.write('\n')
+        for i in range(len(times)):
+            f.write(f'{times[i]:.9e}' + ' ')
+            f.write(f'{timed[i]:.9e}' + ' ')
+            f.write(f'{fggenv[i]:.9e}' + ' ')
+            f.write(f'{fgrelv[i]:.9e}' + ' ')
+            f.write(f'{fgrelp[i]:.9e}' + ' ')
+            f.write(f'{gpres[i]:.9e}' + ' ')
+            f.write(f'{tfin[jz][i]:.9e}' + ' ')
+            f.write(f'{tfout[jz][i]:.9e}' + ' ')
+            f.write(f'{tcin[jz][i]:.9e}' + ' ')
+            f.write(f'{tcout[jz][i]:.9e}' + ' ')
+            f.write(f'{pfc[jz][i]:.9e}' + ' ')
+            f.write(f'{rfo[jz][i]:.9e}' + ' ')
+            f.write(f'{rci[jz][i]:.9e}' + ' ')
+            f.write(f'{bup[jz][i]:.9e}' + ' ')
+            f.write(f'{qv[jz][i]:.9e}' + ' ')
+            f.write(f'{gap[jz][i]:.9e}' + ' ')
+            f.write(f'{hgap[jz][i]:.9e}' + ' ')
+            f.write(f'{esw[jz][i]:.9e}' + ' ')
+            f.write(f'{et[jz][i]:.9e}' + ' ')
+            f.write(f'{sigh[jz][i]:.9e}' + ' ')
+            f.write(f'{sigr[jz][i]:.9e}' + ' ')
+            f.write(f'{sigz[jz][i]:.9e}' + ' ')
+            f.write(f'{ech[jz][i]:.9e}' + ' ')
+            f.write(f'{ecr[jz][i]:.9e}' + ' ')
+            f.write(f'{ecz[jz][i]:.9e}' + ' ')
+            f.write('\n')
 
 def add_slide(prs):
 

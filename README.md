@@ -10,7 +10,7 @@ The typical dataset of the calculational results includes time-dependent radial 
 
 Available materials: 
 - Fuel: MOX.
-- Clad: AIM1 stainless steel.
+- Clad: AIM1 stainless steel, T91 stainless steel.
 - Bonding: helium, xenon, krypton.
 - Inner gas: helium, xenon, krypton.
 

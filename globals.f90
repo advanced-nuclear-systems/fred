@@ -14,6 +14,7 @@ module globals
    integer nfsto                                !number of fuel stoichiometry vs fuel burnup table entries
    integer ntco                                 !number of fuel rod clad outer temperature table entries
    integer ntple                                !number of gas plenum temperature table entries
+   integer ntfix                                !number of fixed times
 
 !=======================================================================
 !  FLAGS:
@@ -23,6 +24,7 @@ module globals
    integer iccreep                              !option of clad creep calculation (0-no, 1-yes)
    integer ifreloc                              !option of fuel relocation calculation (0-no, 1-yes)
    integer inomech                              !option of no mechanics calculation (0-no, 1-yes)
+   integer irst                                 !rstfrd number to read from for restrat
 
    character*4 flag(maxz)                       !flag of gap state ('clos', 'open')
 
@@ -39,9 +41,10 @@ module globals
 
 !=======================================================================
 !  TIME PARAMETERS:
-   real*8 tend                                  !terminal time (s)
-   real*8 dtout                                 !output time step (s)
-   real*8 hmax                                  !maximum time step (s)
+   real(c_double) tend                          !terminal time (s)
+   real(c_double) dtout                         !output time step (s)
+   real(c_double) hmax                          !maximum time step (s)
+   real(c_double) tfix(maxtab)                  !fixed times (s)
 
 !=======================================================================
 !  GEOMETRY PARAMETERS:
@@ -49,33 +52,33 @@ module globals
    integer nc                                   !number of radial clad nodes
    integer nzz                                  !number of axial layers
 
-   real*8 gap(maxz)                             !radial fuel-clad gap (m)
-   real*8 gapth(maxz)                           !"thermal" gap width (m)
-   real*8 reloc(maxz)                           !fraction of the gap closed due to fuel relocation
-   real*8 gask(maxz)                            !gas thermal conductivity (W/mK)
-   real*8 rad0(maxr)                            !initial node radius (m)
-   real*8 rad_0(maxr)                           !initial radius of boundary between nodes(m)
-   real*8 rad(maxr,maxz)                        !node radius (m)
-   real*8 rfi0                                  !initial inner fuel radius (m)
-   real*8 rfi(maxz)                             !inner fuel radius (m)
-   real*8 rfo0                                  !initial outer fuel radius (m)
-   real*8 rfo(maxz)                             !outer fuel radius (m)
-   real*8 rci0                                  !initial inner clad radius (m)
-   real*8 rci(maxz)                             !inner clad radius (m)
-   real*8 rco0                                  !initial outer clad radius (m)
-   real*8 rco(maxz)                             !outer clad radius (m)
-   real*8 dz0(maxz)                             !initial node height (m)
-   real*8 dzf(maxz)                             !fuel node height (m)
-   real*8 dzc(maxz)                             !clad node height (m)
-   real*8 drf0                                  !initial fuel node thickness (m)
-   real*8 drf(maxr,maxz)                        !fuel node thickness (m)
-   real*8 drc0                                  !initial clad node thickness (m)
-   real*8 drc(maxr,maxz)                        !clad node thickness (m)
-   real*8 az0(maxr)                             !initial node cross sectional area (m2)
-   real*8 azf0                                  !initial fuel cross sectional area (m2)
-   real*8 azc0                                  !initial clad cross sectional area (m2)
-   real*8 vgp                                   !gas plenum volume (m3)
-   real*8 h0                                    !initial fuel height (m)
+   real(c_double) gap(maxz)                     !radial fuel-clad gap (m)
+   real(c_double) gapth(maxz)                   !"thermal" gap width (m)
+   real(c_double) reloc(maxz)                   !fraction of the gap closed due to fuel relocation
+   real(c_double) gask(maxz)                    !gas thermal conductivity (W/mK)
+   real(c_double) rad0(maxr)                    !initial node radius (m)
+   real(c_double) rad_0(maxr)                   !initial radius of boundary between nodes(m)
+   real(c_double) rad(maxr,maxz)                !node radius (m)
+   real(c_double) rfi0                          !initial inner fuel radius (m)
+   real(c_double) rfi(maxz)                     !inner fuel radius (m)
+   real(c_double) rfo0                          !initial outer fuel radius (m)
+   real(c_double) rfo(maxz)                     !outer fuel radius (m)
+   real(c_double) rci0                          !initial inner clad radius (m)
+   real(c_double) rci(maxz)                     !inner clad radius (m)
+   real(c_double) rco0                          !initial outer clad radius (m)
+   real(c_double) rco(maxz)                     !outer clad radius (m)
+   real(c_double) dz0(maxz)                     !initial node height (m)
+   real(c_double) dzf(maxz)                     !fuel node height (m)
+   real(c_double) dzc(maxz)                     !clad node height (m)
+   real(c_double) drf0                          !initial fuel node thickness (m)
+   real(c_double) drf(maxr,maxz)                !fuel node thickness (m)
+   real(c_double) drc0                          !initial clad node thickness (m)
+   real(c_double) drc(maxr,maxz)                !clad node thickness (m)
+   real(c_double) az0(maxr)                     !initial node cross sectional area (m2)
+   real(c_double) azf0                          !initial fuel cross sectional area (m2)
+   real(c_double) azc0                          !initial clad cross sectional area (m2)
+   real(c_double) vgp                           !gas plenum volume (m3)
+   real(c_double) h0                            !initial fuel height (m)
 
    character*6 fmat
    character*6 gmat
@@ -83,109 +86,110 @@ module globals
 
 !=======================================================================
 !  TEMPERATURE PARAMETERS:
-   real*8 tem0                                  !initial temperature (K)
-   real*8 tem(maxr,maxz)                        !temperature in node (K)
-   real*8 dtem(maxr,maxz)                       !time derivative of temperature in node (K)
-   real*8 tco(maxz,maxtab)                      !fuel rod clad outer temperature (K) in table of fuel rod clad outer temperature vs time
-   real*8 ttco(maxtab)                          !time (s) in table of fuel rod clad outer temperature vs time
+   real(c_double) tem0                          !initial temperature (K)
+   real(c_double) tem(maxr,maxz)                !temperature in node (K)
+   real(c_double) dtem(maxr,maxz)               !time derivative of temperature in node (K)
+   real(c_double) tco(maxz,maxtab)              !fuel rod clad outer temperature (K) in table of fuel rod clad outer temperature vs time
+   real(c_double) ttco(maxtab)                  !time (s) in table of fuel rod clad outer temperature vs time
 
 !=======================================================================
 !  ENERGY PARAMETERS:
-   real*8 qv(maxz,maxtab)                       !fuel rod power density (W/m3) in table of fuel rod power density vs time
-   real*8 tqv(maxtab)                           !time (s) in table of fuel rod power density vs time
-   real*8 ql(maxz)                              !fuel rod linear power (W/m)
-   real*8 qqv1(maxz)                            !fuel power density (W/m3)
+   real(c_double) qv(maxz,maxtab)               !fuel rod power density (W/m3) in table of fuel rod power density vs time
+   real(c_double) tqv(maxtab)                   !time (s) in table of fuel rod power density vs time
+   real(c_double) ql(maxz)                      !fuel rod linear power (W/m)
+   real(c_double) qqv1(maxz)                    !fuel power density (W/m3)
 
 !=======================================================================
 !  GAS PLENUM PARAMETERS:
-   real*8 gpres0                                !initial inner gas pressure (Pa)
-   real*8 gpres                                 !inner gas pressure (Pa)
-   real*8 mu0                                   !as fabricated gas amount (mol)
-   real*8 tple(maxtab)                          !gas plenum temperature (K) in table of gas plenum temperature vs time
-   real*8 ttple(maxtab)                         !time (s) in table of gas plenum temperature vs time
+   real(c_double) gpres0                        !initial inner gas pressure (Pa)
+   real(c_double) gpres                         !inner gas pressure (Pa)
+   real(c_double) mu0                           !as fabricated gas amount (mol)
+   real(c_double) tple(maxtab)                  !gas plenum temperature (K) in table of gas plenum temperature vs time
+   real(c_double) ttple(maxtab)                 !time (s) in table of gas plenum temperature vs time
 
 !=======================================================================
 !  COOLANT PARAMETERS (FOR BASE IRRADIATION ANALYSIS):
-   real*8 pcool                                 !coolant pressure (Pa)
+   real(c_double) pcool                         !coolant pressure (Pa)
 
 !=======================================================================
 !  MATERIAL PROPERTIES PARAMETERS:
-   real*8 bup(maxz)                             !fuel burnup (MWd/kgU)
-   real*8 dbup(maxz)                            !time derivative of fuel burnup (MWd/kgU/s)
-   real*8 pucont                                !plutonium content in fuel (-)
-   real*8 sto0                                  !initial fuel stoichiometry (-)
-   real*8 rof0                                  !initial fuel density (kg/m3)
-   real*8 roc0                                  !initial clad density (kg/m3)
-   real*8 rof(maxr,maxz)                        !fuel density (kg/m3)
-   real*8 kfuel(maxr,maxz)                      !fuel thermal condcutivity (W/mK)
-   real*8 kclad(maxr,maxz)                      !clad thermal condcutivity (W/mK)
-   real*8 bsto(maxtab)                          !burnup (MWd/kgHM) in table of fuel stoichiometry vs. burnup
-   real*8 stob(maxtab)                          !fuel stoichiometry (-) in table of fuel stoichiometry vs. burnup
+   real(c_double) bup(maxz)                     !fuel burnup (MWd/kgU)
+   real(c_double) dbup(maxz)                    !time derivative of fuel burnup (MWd/kgU/s)
+   real(c_double) pucont                        !plutonium content in fuel (-)
+   real(c_double) sto0                          !initial fuel stoichiometry (-)
+   real(c_double) rof0                          !initial fuel density (kg/m3)
+   real(c_double) roc0                          !initial clad density (kg/m3)
+   real(c_double) rof(maxr,maxz)                !fuel density (kg/m3)
+   real(c_double) kfuel(maxr,maxz)              !fuel thermal condcutivity (W/mK)
+   real(c_double) kclad(maxr,maxz)              !clad thermal condcutivity (W/mK)
+   real(c_double) bsto(maxtab)                  !burnup (MWd/kgHM) in table of fuel stoichiometry vs. burnup
+   real(c_double) stob(maxtab)                  !fuel stoichiometry (-) in table of fuel stoichiometry vs. burnup
+   real(c_double) fswelmlt                      !fuel swelling rate multiplier
 
 !=======================================================================
 !  GAP PARAMETERS:
-   real*8 pfc(maxz)                             !pellet-to-cladding contact pressure (MPa)
-   real*8 dpfc(maxz)                            !time derivative of pellet-to-cladding contact pressure (MPa/s)
-   real*8 rufc                                  !cladding inner surface roughness (m)
-   real*8 ruff                                  !fuel outer surface roughness (m)
-   real*8 hgapt(maxz)                           !gap conductance (W/m**2-K)
-   real*8 hgapi(3,maxz)                         !components of gap conductance (W/m**2-K)
-   real*8 xmol(5)                               !number of moles of gas components (-)
-   real*8 ajump(maxz)                           !solid-gas temperature jump (m)
+   real(c_double) pfc(maxz)                     !pellet-to-cladding contact pressure (MPa)
+   real(c_double) dpfc(maxz)                    !time derivative of pellet-to-cladding contact pressure (MPa/s)
+   real(c_double) rufc                          !cladding inner surface roughness (m)
+   real(c_double) ruff                          !fuel outer surface roughness (m)
+   real(c_double) hgapt(maxz)                   !gap conductance (W/m**2-K)
+   real(c_double) hgapi(3,maxz)                 !components of gap conductance (W/m**2-K)
+   real(c_double) xmol(5)                       !number of moles of gas components (-)
+   real(c_double) ajump(maxz)                   !solid-gas temperature jump (m)
 
 !=======================================================================
 !  CONSTANTS:
-   real*8, parameter :: rmu=8.314d0             !universal gas constant
-   real*8, parameter :: avo=6.0247d23           !Avogadro number
-   real*8, parameter :: pi=3.141592653589793d0  !pi number
+   real(c_double), parameter :: rmu=8.314d0             !universal gas constant
+   real(c_double), parameter :: avo=6.0247d23           !Avogadro number
+   real(c_double), parameter :: pi=3.141592653589793d0  !pi number
 
 !=======================================================================
 !  MECHANICAL PARAMETERS:
-   real*8 sigh(maxr,maxz)                       !clad hoop stress (Pa)
-   real*8 sigr(maxr,maxz)                       !clad radial stress (Pa)
-   real*8 sigz(maxr,maxz)                       !clad axial stress (Pa)
-   real*8 sig(maxr,maxz)                        !clad effective stress (Pa)
-   real*8 eh(maxr,maxz)                         !clad total hoop strain (m/m)
-   real*8 er(maxr,maxz)                         !clad total radial strain (m/m)
-   real*8 ez(maxz)                              !clad total axial strain (m/m)
-   real*8 deh(maxr,maxz)                        !clad total hoop strain time derivative (m/m)
-   real*8 dez(maxz)                             !clad total axial strain time derivative (1/s)
-   real*8 ece(maxr,maxz)                        !clad creep effective strain (m/m)
-   real*8 ech(maxr,maxz)                        !clad creep hoop strain (m/m)
-   real*8 ecr(maxr,maxz)                        !clad creep radial strain (m/m)
-   real*8 ecz(maxr,maxz)                        !clad creep axial strain (m/m)
-   real*8 dece(maxr,maxz)                       !time derivative of clad creep effective strain (m/m)
-   real*8 dech(maxr,maxz)                       !time derivative of clad creep hoop strain (m/m)
-   real*8 decr(maxr,maxz)                       !time derivative of clad creep radial strain (m/m)
-   real*8 decz(maxr,maxz)                       !time derivative of clad creep axial strain (m/m)
-   real*8 et(maxr,maxz)                         !clad thermal linear strain (m/m)
-   real*8 sigfh(maxr,maxz)                      !fuel hoop stress (Pa)
-   real*8 sigfr(maxr,maxz)                      !fuel radial stress (Pa)
-   real*8 sigfz(maxr,maxz)                      !fuel axial stress (Pa)
-   real*8 sigf(maxr,maxz)                       !fuel effective stress (Pa)
-   real*8 efh(maxr,maxz)                        !fuel total hoop strain (m/m)
-   real*8 efr(maxr,maxz)                        !fuel total radial strain (m/m)
-   real*8 efz(maxz)                             !fuel total axial strain (m/m)
-   real*8 defh(maxr,maxz)                       !fuel total hoop strain time derivative (m/m)
-   real*8 defz(maxz)                            !fuel total axial strain time derivative (1/s)
-   real*8 eft(maxr,maxz)                        !fuel linear thermal expansion (m/m)
-   real*8 efs(maxr,maxz)                        !fuel volumetric swelling strain (m/m)
-   real*8 defs(maxr,maxz)                       !time derivative of fuel volumetric swelling strain (m/m)
-   real*8 fcreepc(3)                            !user input constants for the fuel creep rate law
-   real*8 efce(maxr,maxz)                       !fuel creep effective strain (m/m)
-   real*8 efch(maxr,maxz)                       !fuel creep hoop strain (m/m)
-   real*8 efcr(maxr,maxz)                       !fuel creep radial strain (m/m)
-   real*8 efcz(maxr,maxz)                       !fuel creep axial strain (m/m)
-   real*8 defce(maxr,maxz)                      !time derivative of fuel creep effective strain (1/s)
-   real*8 defch(maxr,maxz)                      !time derivative of fuel creep hoop strain (1/s)
-   real*8 defcr(maxr,maxz)                      !time derivative of fuel creep radial strain (1/s)
-   real*8 defcz(maxr,maxz)                      !time derivative of fuel creep axial strain (1/s)
+   real(c_double) sigh(maxr,maxz)               !clad hoop stress (Pa)
+   real(c_double) sigr(maxr,maxz)               !clad radial stress (Pa)
+   real(c_double) sigz(maxr,maxz)               !clad axial stress (Pa)
+   real(c_double) sig(maxr,maxz)                !clad effective stress (Pa)
+   real(c_double) eh(maxr,maxz)                 !clad total hoop strain (m/m)
+   real(c_double) er(maxr,maxz)                 !clad total radial strain (m/m)
+   real(c_double) ez(maxz)                      !clad total axial strain (m/m)
+   real(c_double) deh(maxr,maxz)                !clad total hoop strain time derivative (m/m)
+   real(c_double) dez(maxz)                     !clad total axial strain time derivative (1/s)
+   real(c_double) ece(maxr,maxz)                !clad creep effective strain (m/m)
+   real(c_double) ech(maxr,maxz)                !clad creep hoop strain (m/m)
+   real(c_double) ecr(maxr,maxz)                !clad creep radial strain (m/m)
+   real(c_double) ecz(maxr,maxz)                !clad creep axial strain (m/m)
+   real(c_double) dece(maxr,maxz)               !time derivative of clad creep effective strain (m/m)
+   real(c_double) dech(maxr,maxz)               !time derivative of clad creep hoop strain (m/m)
+   real(c_double) decr(maxr,maxz)               !time derivative of clad creep radial strain (m/m)
+   real(c_double) decz(maxr,maxz)               !time derivative of clad creep axial strain (m/m)
+   real(c_double) et(maxr,maxz)                 !clad thermal linear strain (m/m)
+   real(c_double) sigfh(maxr,maxz)              !fuel hoop stress (Pa)
+   real(c_double) sigfr(maxr,maxz)              !fuel radial stress (Pa)
+   real(c_double) sigfz(maxr,maxz)              !fuel axial stress (Pa)
+   real(c_double) sigf(maxr,maxz)               !fuel effective stress (Pa)
+   real(c_double) efh(maxr,maxz)                !fuel total hoop strain (m/m)
+   real(c_double) efr(maxr,maxz)                !fuel total radial strain (m/m)
+   real(c_double) efz(maxz)                     !fuel total axial strain (m/m)
+   real(c_double) defh(maxr,maxz)               !fuel total hoop strain time derivative (m/m)
+   real(c_double) defz(maxz)                    !fuel total axial strain time derivative (1/s)
+   real(c_double) eft(maxr,maxz)                !fuel linear thermal expansion (m/m)
+   real(c_double) efs(maxr,maxz)                !fuel volumetric swelling strain (m/m)
+   real(c_double) defs(maxr,maxz)               !time derivative of fuel volumetric swelling strain (m/m)
+   real(c_double) fcreepc(3)                    !user input constants for the fuel creep rate law
+   real(c_double) efce(maxr,maxz)               !fuel creep effective strain (m/m)
+   real(c_double) efch(maxr,maxz)               !fuel creep hoop strain (m/m)
+   real(c_double) efcr(maxr,maxz)               !fuel creep radial strain (m/m)
+   real(c_double) efcz(maxr,maxz)               !fuel creep axial strain (m/m)
+   real(c_double) defce(maxr,maxz)              !time derivative of fuel creep effective strain (1/s)
+   real(c_double) defch(maxr,maxz)              !time derivative of fuel creep hoop strain (1/s)
+   real(c_double) defcr(maxr,maxz)              !time derivative of fuel creep radial strain (1/s)
+   real(c_double) defcz(maxr,maxz)              !time derivative of fuel creep axial strain (1/s)
 
 !=======================================================================
 ! FISSION GAS RELEASE AND SWELLING PARAMETERS:
-   real*8 fggen                                 !amount of fission gas produced in fuel rod (mol/s)
-   real*8 fgrel                                 !amount of fission gas released in fuel rod (mol)
-   real*8 dfggen                                !time derivative of amount of fission gas produced in fuel rod (mol/s)
-   real*8 dfgrel                                !time derivative of amount of fission gas released in fuel rod (mol/s)
+   real(c_double) fggen                         !amount of fission gas produced in fuel rod (mol/s)
+   real(c_double) fgrel                         !amount of fission gas released in fuel rod (mol)
+   real(c_double) dfggen                        !time derivative of amount of fission gas produced in fuel rod (mol/s)
+   real(c_double) dfgrel                        !time derivative of amount of fission gas released in fuel rod (mol/s)
 
 end module globals
