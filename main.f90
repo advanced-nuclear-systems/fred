@@ -143,7 +143,7 @@ program main
    end if
 
 !  Call FIDARootInit to specify the root function with nzz components
-   retval = FIDARootInit(ida_mem, 2*nzz + ntfix, c_funloc(root))
+   retval = FIDARootInit(ida_mem, nzz + ntfix, c_funloc(root))
    if (retval /= 0) then
       print *, 'Error in FIDARootInit, retval = ', retval, '; halting'
       stop
