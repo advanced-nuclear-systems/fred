@@ -8,7 +8,7 @@ libdir     = ${prefix}/lib64
 # ATTENTION: path to FORTRAN compiler
 F90      = /opt/psi/Programming/gcc/13.1.0/bin/gfortran
 F90FLAGS = -O3 
-F90LIBS  =  -lm
+F90LIBS  = -lm
 
 # ------------------------------------------------------------------------------
 
@@ -24,6 +24,8 @@ FILES_DEPENDENCIES = globals FRED
 OBJECTS = ${FILES:=.o}
 OBJECTS_DEPENDENCIES = ${FILES_DEPENDENCIES:=.o}
 
+EXE = FRED1.2.0.x
+
 # ------------------------------------------------------------------------------
 
 .SUFFIXES : .o .f90
@@ -35,6 +37,6 @@ OBJECTS_DEPENDENCIES = ${FILES_DEPENDENCIES:=.o}
 
 all: ${OBJECTS_DEPENDENCIES} ${OBJECTS}
 	@for i in ${FILES} ; do \
-	  echo "${F90} -o FRED $${i}.o ${OBJECTS_DEPENDENCIES} ${F90FLAGS} ${INCLUDES} -L${libdir} ${LIBRARIES} ${LINKFLAGS}" ; \
-	  ${F90} -o FRED $${i}.o ${OBJECTS_DEPENDENCIES} ${F90FLAGS} ${INCLUDES} -L${libdir} ${LIBRARIES} ${LINKFLAGS} ; \
+	  echo "${F90} -o ${EXE} $${i}.o ${OBJECTS_DEPENDENCIES} ${F90FLAGS} ${INCLUDES} -L${libdir} ${LIBRARIES} ${LINKFLAGS}" ; \
+	  ${F90} -o ${EXE} $${i}.o ${OBJECTS_DEPENDENCIES} ${F90FLAGS} ${INCLUDES} -L${libdir} ${LIBRARIES} ${LINKFLAGS} ; \
 	done

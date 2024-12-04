@@ -661,6 +661,43 @@ contains
    end function cpoir
 
 !--------------------------------------------------------------------------------------------------
+! Calculates burst stress for cladding
+!--------------------------------------------------------------------------------------------------
+   real(c_double) function csigb(tk) bind(C,name='csigb_')
+   real(c_double) tk
+
+   if(cmat.eq.'aim1'.or.cmat.eq.'t91')then
+      csigb = 1.5957d9 - 4.7253d6*tk + 9.8851d3*tk**2 - 8.8864d0*tk**3 + 2.5538d-3*tk**4
+   else
+      csigb = 0.0
+   end if
+   return
+   end function csigb
+
+!--------------------------------------------------------------------------------------------------
+! Calculate yield stress for cladding
+!--------------------------------------------------------------------------------------------------
+   real(c_double) function csigy(tk) bind(C,name='csigy_')
+   real(c_double) tk, tc
+
+   if(cmat.eq.'t91')then
+      csigy = 1.3109d9 - 3.6916d6*tk + 7.8909d3*tk**2 - 7.3551d0*tk**3 + 2.1966d-3*tk**4
+   else if(cmat.eq.'aim1')then
+     tc = tk - 273.15
+     if(tc.lt.600)then
+         csigy = 5.555d8 - 0.25d0*tc
+     else if(tc.ge.600 .and. tc.le.1000)then
+         csigy = 4.055d8 - 0.755d0*(tc-600.0d0)
+     else
+         csigy = 3.455d8 - 0.25d0*tc
+     end if
+   else
+      csigy = 0.0
+   end if
+   return
+   end function csigy
+
+!--------------------------------------------------------------------------------------------------
 ! Calculates the clad thermal expansion strain
 !--------------------------------------------------------------------------------------------------
    real(c_double) function ctexp(tk) bind(C,name='ctexp_')
@@ -680,6 +717,25 @@ contains
    end if
    return
    end function ctexp
+
+!--------------------------------------------------------------------------------------------------
+! Calculates ultimate elongation for cladding
+!--------------------------------------------------------------------------------------------------
+   real(c_double) function cuelon(tk) bind(C,name='cuelon_')
+
+   real*8 tk
+
+   if(cmat.eq.'aim1'.or.cmat.eq.'t91')then
+      if(tk.le.720.d0)then
+         cuelon=-0.58258 + 8.4018d-3*tk - 3.2807d-5*tk**2 + 4.9989d-8*tk**3 - 2.6347d-11*tk**4
+      else
+         cuelon=-0.85401 + 4.5753d-3*tk - 8.2202d-6*tk**2 + 6.1983d-9*tk**3 - 1.6897d-12*tk**4
+      end if           
+   else
+      cuelon = 0.0
+   end if
+   return
+   end function cuelon
 
 !--------------------------------------------------------------------------------------------------
 ! Calculation of fuel specific heat
