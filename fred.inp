@@ -9,6 +9,7 @@
 000001    FUEL_SWEL           1.0
 *000001    FUEL_RELOC
 000001    CLAD_CREEP
+000001    CLAD_PLAS
 *000001    RESTART   1001
 *---- ----1---- ----2---- ----3---- ----4---- ----5---- ----6---- ----7---- ----8---- ----9--
 *         INITIAL TEMPERATURE CARD

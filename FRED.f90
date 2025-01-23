@@ -125,7 +125,7 @@ contains
 
    integer(c_int) j, i, n
    real(c_double) polp,polp2,clamb,ctexp,gaphtc,flamb_,ftexp,felmod_,fpoir,fcp,ccp,celmod,cpoir,gpresf,fswel, &
-  &               fcreep,ccreep
+  &               fcreep,ccreep,cplas
    real(c_double) tmp(maxtab),kclad_,kfuel_,sto,cp,vol, &
   &       tem_(maxr),qf_(maxr), &
   &       fyng(maxr),fpoi(maxr), &
@@ -373,7 +373,7 @@ contains
          n = n + 1
          r(n) = et(i,j) - (ctexp(tem(nf+i,j)) - ctexp(293.15d0))
       end do
-      
+
 !     CLAD: creep rate ODEs
       if(iccreep .eq. 1)then
 !        clad creep effective strain rate ODE (1/s)
@@ -409,6 +409,45 @@ contains
                r(n) = decz(i,j)
             else
                r(n) = decz(i,j) - 1.5d0*dece(i,j)*( sigz(i,j) - (sigh(i,j) + sigr(i,j) + sigz(i,j))/3.0d0 )/sig(i,j)
+            end if
+         end do
+      end if
+
+!     CLAD: plastic rate ODEs
+      if(icplas .eq. 1)then
+!        clad plastic effective strain rate ODE (1/s)
+         do i=1,nc
+            n = n + 1
+            r(n) = depe(i,j) - cplas(tem(nf+i,j),sig(i,j))
+         end do
+      
+!        clad plastic hoop strain rate ODE (1/s): Prandtl-Reuss flow rule
+         do i=1,nc
+            n = n + 1
+            if(sig(i,j) .eq. 0.0d0)then
+               r(n) = deph(i,j)
+            else
+               r(n) = deph(i,j) - 1.5d0*depe(i,j)*( sigh(i,j) - (sigh(i,j) + sigr(i,j) + sigz(i,j))/3.0d0 )/sig(i,j)
+            end if
+         end do
+         
+!        clad plastic radial strain rate ODE (1/s): Prandtl-Reuss flow rule
+         do i=1,nc
+            n = n + 1
+            if(sig(i,j) .eq. 0.0d0)then
+               r(n) = depr(i,j)
+            else
+               r(n) = depr(i,j) - 1.5d0*depe(i,j)*( sigr(i,j) - (sigh(i,j) + sigr(i,j) + sigz(i,j))/3.0d0 )/sig(i,j)
+            end if
+         end do
+         
+!        clad plastic axial strain rate ODE (1/s): Prandtl-Reuss flow rule
+         do i=1,nc
+            n = n + 1
+            if(sig(i,j) .eq. 0.0d0)then
+               r(n) = depz(i,j)
+            else
+               r(n) = depz(i,j) - 1.5d0*depe(i,j)*( sigz(i,j) - (sigh(i,j) + sigr(i,j) + sigz(i,j))/3.0d0 )/sig(i,j)
             end if
          end do
       end if
@@ -607,7 +646,7 @@ contains
       tc=tk-273.15
       if(tc .le. 500.0)then
          celmod=2.073d11-64.58d6*tc
-      else if(tc .le. 600.0)then
+      else
          celmod=2.95d11-240.0d6*tc
       end if   
    else
@@ -642,6 +681,32 @@ contains
    end function clamb
 
 !--------------------------------------------------------------------------------------------------
+! Returns clad material effective plastic rate (1/s)
+!     input arguments :
+!        tk -- temperature (K)
+!        sg -- effective stress (MPa)
+!--------------------------------------------------------------------------------------------------
+   real(c_double) function cplas(tk,sg) bind(C,name='cplas_')
+
+   real(c_double) tk,sg,sgy,sgb,epsy,epsb
+
+   if(cmat.eq.'aim1')then
+      sgy = csigy(tk)
+      sgb = csigb(tk)
+      epsy = sgy/celmod(tk)
+      epsb = cuelon(tk)
+      if(sg .lt. sgy .or. sg .ge. sgb)then
+         cplas = 0.0d0
+      else
+         cplas = 1.0d-3
+      end if
+   else
+      cplas = 0.0d0
+   end if
+   return
+   end function cplas
+
+!--------------------------------------------------------------------------------------------------
 ! Calculation of the clad Poisson ratio
 !                unitless
 !     input arguments :
@@ -668,6 +733,7 @@ contains
 
    if(cmat.eq.'aim1'.or.cmat.eq.'t91')then
       csigb = 1.5957d9 - 4.7253d6*tk + 9.8851d3*tk**2 - 8.8864d0*tk**3 + 2.5538d-3*tk**4
+      csigb = csigb / 1.0d6
    else
       csigb = 0.0
    end if
@@ -678,22 +744,26 @@ contains
 ! Calculate yield stress for cladding
 !--------------------------------------------------------------------------------------------------
    real(c_double) function csigy(tk) bind(C,name='csigy_')
+
    real(c_double) tk, tc
 
    if(cmat.eq.'t91')then
       csigy = 1.3109d9 - 3.6916d6*tk + 7.8909d3*tk**2 - 7.3551d0*tk**3 + 2.1966d-3*tk**4
+      csigy = csigy / 1.0d6
    else if(cmat.eq.'aim1')then
-     tc = tk - 273.15
-     if(tc.lt.600)then
+      tc = tk - 273.15
+      if(tc.lt.600)then
          csigy = 5.555d8 - 0.25d0*tc
-     else if(tc.ge.600 .and. tc.le.1000)then
+      else if(tc.ge.600 .and. tc.le.1000)then
          csigy = 4.055d8 - 0.755d0*(tc-600.0d0)
-     else
+      else
          csigy = 3.455d8 - 0.25d0*tc
-     end if
+      end if
+      csigy = csigy / 1.0d6
    else
       csigy = 0.0
    end if
+   
    return
    end function csigy
 
@@ -1274,6 +1344,21 @@ contains
    do j=1,nzz
       write(700,10)title,j,(efcz(i,j)*100.0d0,i=1,nf),(ecz(i,j)*100.0d0,i=1,nc)
    end do
+
+   title = "eps h plas (%)      "
+   do j=1,nzz
+      write(700,10)title,j,(eph(i,j)*100.0d0,i=1,nc)
+   end do
+
+   title = "eps r plas (%)      "
+   do j=1,nzz
+      write(700,10)title,j,(epr(i,j)*100.0d0,i=1,nc)
+   end do
+   
+   title = "eps z plas (%)      "
+   do j=1,nzz
+      write(700,10)title,j,(epz(i,j)*100.0d0,i=1,nc)
+   end do
    
    title = "eps thermal lin (%) "
    do j=1,nzz
@@ -1451,6 +1536,7 @@ contains
       ifcreep=0
       ifswel=0
       iccreep=0
+      icplas=0
       ifreloc=0
       inomech=0
       irst=-1
@@ -1487,6 +1573,9 @@ contains
 
                else if(w2 .eq. 'CLAD_CREEP')then
                   iccreep=1
+
+               else if(w2 .eq. 'CLAD_PLAS')then
+                  icplas=1
 
                else if(w2 .eq. 'FUEL_RELOC')then
                   ifreloc=1
@@ -1834,6 +1923,12 @@ contains
             neq_j = neq_j + nc       !ecr
             neq_j = neq_j + nc       !ecz
          end if
+         if(icplas .eq. 1)then
+            neq_j = neq_j + nc       !epe
+            neq_j = neq_j + nc       !eph
+            neq_j = neq_j + nc       !epr
+            neq_j = neq_j + nc       !epz
+         end if
          neq_j = neq_j + nc          !eh
          neq_j = neq_j + nc          !er
          neq_j = neq_j + 1           !ez
@@ -2023,6 +2118,24 @@ contains
                y(k) = ecz(i,j)
             end do
          end if
+         if(icplas .eq. 1)then
+            do i=1,nc
+               k = k + 1
+               y(k) = epe(i,j)
+            end do
+            do i=1,nc
+               k = k + 1
+               y(k) = eph(i,j)
+            end do
+            do i=1,nc
+               k = k + 1
+               y(k) = epr(i,j)
+            end do
+            do i=1,nc
+               k = k + 1
+               y(k) = epz(i,j)
+            end do
+         end if
          do i=1,nc
             k = k + 1
             y(k) = eh(i,j)
@@ -2151,6 +2264,24 @@ contains
                ecz(i,j) = y(k)
             end do
          end if
+         if(icplas .eq. 1)then
+            do i=1,nc
+               k = k + 1
+               epe(i,j) = y(k)
+            end do
+            do i=1,nc
+               k = k + 1
+               eph(i,j) = y(k)
+            end do
+            do i=1,nc
+               k = k + 1
+               epr(i,j) = y(k)
+            end do
+            do i=1,nc
+               k = k + 1
+               epz(i,j) = y(k)
+            end do
+         end if
          do i=1,nc
             k = k + 1
             eh(i,j) = y(k)
@@ -2277,6 +2408,24 @@ contains
             do i=1,nc
                k = k + 1
                decz(i,j) = y_t(k)
+            end do
+         end if
+         if(icplas .eq. 1)then
+            do i=1,nc
+               k = k + 1
+               depe(i,j) = y_t(k)
+            end do
+            do i=1,nc
+               k = k + 1
+               deph(i,j) = y_t(k)
+            end do
+            do i=1,nc
+               k = k + 1
+               depr(i,j) = y_t(k)
+            end do
+            do i=1,nc
+               k = k + 1
+               depz(i,j) = y_t(k)
             end do
          end if
          do i=1,nc
@@ -2436,6 +2585,28 @@ contains
          end do
          do i=1,nc
             !ecz
+            k = k + 1
+            atol(k)=etol
+         end do
+      end if
+      if(icplas .eq. 1)then
+         do i=1,nc
+            !epe
+            k = k + 1
+            atol(k)=etol
+         end do
+         do i=1,nc
+            !eph
+            k = k + 1
+            atol(k)=etol
+         end do
+         do i=1,nc
+            !epr
+            k = k + 1
+            atol(k)=etol
+         end do
+         do i=1,nc
+            !epz
             k = k + 1
             atol(k)=etol
          end do
