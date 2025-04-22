@@ -1540,6 +1540,17 @@ contains
       ifreloc=0
       inomech=0
       irst=-1
+      zrcont = 0.1d0
+!     relative tolerance
+      rtol = 1.0d-8
+!     absolute tolerances:
+      btol = 1.0d-4   !burnup (MWd/kg)
+      etol = 1.0d-6   !strain (-)
+      ftol = 1.0d-7   !fission gas (mol)
+      htol = 1.0d-4   !gap conductance (W/m2K)
+      gtol = 1.0d-6   !gap (m)
+      stol = 1.0d-4   !stress (MPa)
+      ttol = 1.0d-6   !temperature (K)
 
       open(700, file='fred.inp')
 !     first symbol of the card
@@ -1587,6 +1598,42 @@ contains
                   backspace 700
                   read(700,*,err=1000)i1,w2,irst
 
+               else if(w2 .eq. 'ZR_CONTENT')then
+                  backspace 700
+                  read(700,*,err=1000)i1,w2,zrcont
+
+               else if(w2 .eq. 'RTOL')then
+                  backspace 700
+                  read(700,*,err=1000)i1,w2,rtol
+
+               else if(w2 .eq. 'ATOL_BURNUP')then
+                  backspace 700
+                  read(700,*,err=1000)i1,w2,btol
+
+               else if(w2 .eq. 'ATOL_STRAIN')then
+                  backspace 700
+                  read(700,*,err=1000)i1,w2,stol
+
+               else if(w2 .eq. 'ATOL_FISGAS')then
+                  backspace 700
+                  read(700,*,err=1000)i1,w2,ftol
+
+               else if(w2 .eq. 'ATOL_GAPCON')then
+                  backspace 700
+                  read(700,*,err=1000)i1,w2,htol
+
+               else if(w2 .eq. 'ATOL_GAPWID')then
+                  backspace 700
+                  read(700,*,err=1000)i1,w2,gtol
+
+               else if(w2 .eq. 'ATOL_STRESS')then
+                  backspace 700
+                  read(700,*,err=1000)i1,w2,gtol
+
+               else if(w2 .eq. 'ATOL_TEMPER')then
+                  backspace 700
+                  read(700,*,err=1000)i1,w2,ttol
+
                end if   
 
 !           initial temperature card
@@ -1614,7 +1661,7 @@ contains
 !           fuel card
             else if(i1.eq.100001)then
                backspace 700
-!              fmat  - fuel material (MOX)
+!              fmat  - fuel material (MOX, UPuZr)
 !              rof - fuel density (kg/m3)
 !              pucont - plutonium content
 !              rfi0  - inner fuel radius (m)
@@ -2461,16 +2508,7 @@ contains
    subroutine abs_err(atol)
 
    integer(c_int) i,j,k
-   real(c_double) atol(maxeq),btol,etol,ftol,gtol,htol,ptol,stol,ttol
-
-!  absolute tolerances:
-   btol = 1.0d-4   !burnup (MWd/kg)
-   etol = 1.0d-6   !strain (-)
-   ftol = 1.0d-7   !fission gas (mol)
-   htol = 1.0d-4   !gap conductance (W/m2K)
-   gtol = 1.0d-6   !gap (m)
-   stol = 1.0d-4   !stress (MPa)
-   ttol = 1.0d-6   !temperature (K)
+   real(c_double) atol(maxeq)
 
    k = 0
    !fggen
@@ -2491,6 +2529,7 @@ contains
       atol(k)=btol
       !gap(j)
       k = k + 1
+      atol(k)=gtol
       !pfc(j)
       k = k + 1
       atol(k)=stol

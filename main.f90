@@ -29,7 +29,7 @@ program main
    type(c_ptr) :: ida_mem                             ! IDA memory
    type(c_ptr) :: sunctx                              ! SUNDIALS simulation context
 
-   real(c_double) :: yval(maxeq), ypval(maxeq), rtol, avtol(maxeq)
+   real(c_double) :: yval(maxeq), ypval(maxeq), avtol(maxeq)
    real(c_double) :: next_recommended_step(1)
 
    retval = FSUNContext_Create(SUN_COMM_NULL, sunctx)
@@ -54,8 +54,6 @@ program main
       call rstfrd('read ',t,nnn,yval,ypval)
    end if
 
-!  set relative tolerance
-   rtol = 1.0d-8
 !  set vector of absolute tolerances avtol
    call abs_err(avtol)
 

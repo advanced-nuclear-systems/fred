@@ -48,6 +48,17 @@ module globals
    real(c_double) tfix(maxtab)                  !fixed times (s)
 
 !=======================================================================
+!  TOLERANCE PARAMETERS:
+   real(c_double) rtol                          !relative tolerance
+   real(c_double) btol                          !absolute tolerance for burnup (MWd/kgHM)
+   real(c_double) etol                          !absolute tolerance for strain (m/m)
+   real(c_double) ftol                          !absolute tolerance for fission gas amount (mol)
+   real(c_double) htol                          !absolute tolerance for gap conductance (W/m2K)
+   real(c_double) gtol                          !absolute tolerance for gap width (m)
+   real(c_double) stol                          !absolute tolerance for stress (MPa)
+   real(c_double) ttol                          !absolute tolerance for temperature (K)
+
+!=======================================================================
 !  GEOMETRY PARAMETERS:
    integer nf                                   !number of radial fuel nodes
    integer nc                                   !number of radial clad nodes
@@ -126,6 +137,7 @@ module globals
    real(c_double) bsto(maxtab)                  !burnup (MWd/kgHM) in table of fuel stoichiometry vs. burnup
    real(c_double) stob(maxtab)                  !fuel stoichiometry (-) in table of fuel stoichiometry vs. burnup
    real(c_double) fswelmlt                      !fuel swelling rate multiplier
+   real(c_double) zrcont                        !Zr content in U-Pu_Zr fuel
 
 !=======================================================================
 !  GAP PARAMETERS:
