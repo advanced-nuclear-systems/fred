@@ -24,7 +24,7 @@ FILES_DEPENDENCIES = globals FRED
 OBJECTS = ${FILES:=.o}
 OBJECTS_DEPENDENCIES = ${FILES_DEPENDENCIES:=.o}
 
-EXE = FRED1.4.0.x
+EXE = FRED1.4.1.x
 
 # ------------------------------------------------------------------------------
 

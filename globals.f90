@@ -6,7 +6,7 @@ module globals
    integer, parameter :: maxeq=100000           !maximum number of equations
    integer, parameter :: maxz=30                !maximum number of axial nodes
    integer, parameter :: maxr=30                !maximum number of radial nodes
-   integer, parameter :: maxtab=50              !maximum number of entries in tables
+   integer, parameter :: maxtab=100             !maximum number of entries in tables
 
 !=======================================================================
 !  DIMENSIONS OF TABLES:
