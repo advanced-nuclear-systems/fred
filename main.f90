@@ -15,7 +15,7 @@ program main
 
    implicit none
    real(c_double) :: t, tout, tret(1), h(1)
-   integer(c_int) :: iout, retval, retvalr, nrtfn, i, rootsfound(2*maxz+maxtab), k
+   integer(c_int) :: iout, retval, retvalr, nrtfn, i, j, rootsfound(2*maxz+maxtab), k
 
    integer(c_long) maxsteps
    integer(c_int) nnn,maxnef,maxcor
@@ -170,20 +170,21 @@ program main
 
      retval = FIDASolve(ida_mem, t, tret, sunvec_y, sunvec_yp, IDA_NORMAL)
 
-     if (retval .eq. IDA_ROOT_RETURN) then
+     if(retval .eq. IDA_ROOT_RETURN) then
         retval = FIDAGetRootInfo(ida_mem, rootsfound)
         if (retval < 0) then
            print *, 'Error in FIDAGetRootInfo, retval = ', retval
            stop
         end if
         k = 0
-        do i=1,nzz
+!       gap closure event
+        do j=1,nzz
            k = k + 1
            if(rootsfound(k) .eq. -1)then
-              write(*,*)'Gap closed at axial layer ', i
+              write(*,*)'Gap closed at axial layer ', j
            end if
         end do
-        k = 0
+
      else if (retval < 0) then
         print *, 'Error in FIDASolve, retval = ', retval
         stop

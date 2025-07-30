@@ -41,6 +41,19 @@ contains
    call read_from_y(y)
    call read_from_y_t(y_t)
 
+!  check gstate after restart
+   do j=1,nzz
+      if(gstate(j) .eq. 'open')then
+         if(gap(j) .le. (ruff + rufc))then
+            if(pfc(j) .lt. gpres)then
+               gstate(j) = 'clos'
+            else
+               gstate(j) = 'clos'
+            end if
+         end if
+      end if
+   end do
+
    do j=1,nzz
 !     given deformations, update geometry
       call update_geom(j)
@@ -124,7 +137,7 @@ contains
    real(c_double), intent(inout) :: r(:)
 
    integer(c_int) j, i, n
-   real(c_double) polp,polp2,clamb,ctexp,gaphtc,flamb_,ftexp,felmod_,fpoir,fcp,ccp,celmod,cpoir,gpresf,fswel, &
+   real(c_double) polp,clamb,ctexp,gaphtc,flamb_,ftexp,felmod_,fpoir,fcp,ccp,celmod,cpoir,gpresf,fswel, &
   &               fcreep,ccreep,cplas
    real(c_double) tmp(maxtab),kclad_,kfuel_,sto,cp,vol, &
   &       tem_(maxr),qf_(maxr), &
@@ -168,7 +181,6 @@ contains
    end do
    n = n + 1
    r(n) = qqv1(j) - polp(time,tmp,tqv,nqv)
-   !r(n) = qqv1(j) - polp2(time,tqv,tmp,nqv,360.0d0)
 
 !  fuel burnup rate ODE (J/kg-s)
    n = n + 1
@@ -177,19 +189,19 @@ contains
 !  gap width AE
    n = n + 1
    r(n) = gap(j) - (rci(j) - rfo(j))
-   
-!  gap state (flag)
-   if(gap(j) .le. (ruff + rufc)) flag(j) = 'clos'
+ 
+!  gap state
+   if(gstate(j) .eq. 'open' .and. gap(j) .le. (ruff + rufc)) gstate(j) = 'clos'
 
 !   the condition of the gap reopening was commented -- to be further explored
-!    if(sigr(1,j) .ge. 0.d0) flag(j) = 'open'
+!    if(gstate(j) .eq. 'clos' .and. gpres .gt. pfc(j)) gstate(j) = 'open'
 
 !  contact pressure AE (MPa)
    n = n + 1
-   if(flag(j) .eq. 'clos')then
-      r(n) = pfc(j) - dabs(sigr(1,j))
-   else      
+   if(gstate(j) .eq. 'open')then
       r(n) = pfc(j)
+   else
+      r(n) = pfc(j) - dabs(sigr(1,j))
    end if
 
 !  gap conductance AE (W/m2K)
@@ -333,7 +345,12 @@ contains
 !     FUEL: boundary conditions - 1
       n = n + 1
       r(n) = 0.0d0
-      if(flag(j).eq.'clos')then
+      if(gstate(j).eq.'open')then
+         do i=1,nf
+            r(n) = r(n) + az0(i)*sigfz(i,j)
+         end do
+         r(n) = r(n) + azf0*gpres
+      else
          do i=1,nf
             r(n) = r(n) + az0(i)*sigfz(i,j)
          end do
@@ -341,11 +358,6 @@ contains
             r(n) = r(n) + az0(nf+i)*sigz(i,j)
          end do
          r(n) = r(n) + pcool*pi*rco0**2
-      else
-         do i=1,nf
-            r(n) = r(n) + az0(i)*sigfz(i,j)
-         end do
-         r(n) = r(n) + azf0*gpres
       end if
       
 !     FUEL: boundary conditions - 2
@@ -360,12 +372,12 @@ contains
       
 !     FUEL: boundary conditions - 3
       n = n + 1
-      if(flag(j).eq.'clos')then
-!        closed gap: D(ez_fuel)=D(ez_clad)
-         r(n) = defz(j) - dez(j)
-      else
+      if(gstate(j).eq.'open')then
 !        open gap: sigr=-gpres
          r(n) = sigfr(nf,j) + gpres
+      else
+!        closed gap: D(ez_fuel)=D(ez_clad)
+         r(n) = defz(j) - dez(j)
       end if
       
 !     CLAD: thermal expansion rate AE
@@ -487,27 +499,27 @@ contains
       
 !     CLAD: boundary conditions - 1
       n = n + 1
-      if(flag(j).eq.'clos')then
-!        closed gap: sigr_fuel=sigr_clad
-         r(n) = sigfr(nf,j) - sigr(1,j)
-      else
+      if(gstate(j).eq.'open')then
 !        open gap: axial stress equilibrity eq.
          r(n) = 0.0d0
          do i=1,nc
             r(n) = r(n) + az0(nf+i)*sigz(i,j)
          end do
          r(n) = r(n) + pcool*pi*rco0**2 - gpres*pi*rci0**2
+      else
+!        closed gap: sigr_fuel=sigr_clad
+         r(n) = sigfr(nf,j) - sigr(1,j)
       end if
       
 !     CLAD: boundary conditions - 2
       n = n + 1
-      if(flag(j).eq.'clos')then
+      if(gstate(j).eq.'open')then
+!        open gap: gas pressure: sigr=-gpres
+         r(n) = sigr(1,j) + gpres
+      else
 !        closed gap: D(eh_fuel)=D(eh_clad)
          !r(n) = defh(nf,j) - deh(1,j)
          r(n) = gap(j) - (ruff+rufc)
-      else
-!        open gap: gas pressure: sigr=-gpres
-         r(n) = sigr(1,j) + gpres
       end if
       
 !     CLAD: boundary conditions - 3
@@ -559,10 +571,11 @@ contains
 
 !  fill root vector
    k = 0
+!  gap closure event
    do j = 1,nzz
       k = k + 1
-      if(gap(j) .gt. (ruff + rufc) .and. flag(j) .eq. 'open')then
-         gout(k) = dmax1(0.0d0, gap(j) - (ruff + rufc) )
+      if(gap(j) .gt. (ruff + rufc) .and. gstate(j) .eq. 'open')then
+         gout(k) = dmax1(0.0d0, gap(j) - (ruff + rufc))
       else
          gout(k) = -1
       end if
@@ -876,14 +889,25 @@ contains
 !--------------------------------------------------------------------------------------------------
    real(c_double) function felmod(tk,den,cont) bind(C,name='felmod_')
 
-   real(c_double) tk,den,cont,tden,por
+   real(c_double) tk,den,cont,tden,por,tm,t0, fsoft
 
    if(fmat.eq.'mox')then
       tden=11460.d0*cont+10960.d0*(1.d0-cont)
       por=1.d0-den/tden
+!     melting point
+      tm=3120.0d0-388.1d0*cont-30.4d0*cont**2
 !     MATPRO correlation
       felmod=(2.334d11*(1.0d0-2.752d0*por)*(1.d0-1.0915d-4*tk))*(1.d0+0.15d0*cont)
-   else
+!     Define t0 as 150 K below melting
+      t0 = tm - 150.d0
+!     Softening function to account for fuel softening close to melting
+      if(tk < t0)then
+         fsoft = 1.0d0
+      else
+         fsoft = max(1.0d0, 1.0d0 - ((tk - t0)/(tm - t0))**12)
+      end if
+      felmod = felmod * fsoft
+    else
       write(*,*)'wrong fuel material:',fmat
       stop
    end if
@@ -897,12 +921,15 @@ contains
    real(c_double) function fgr(j)
 
    integer(c_int) j,i
-   real(c_double) a,fgrR,fgrU,aR,r
+   real(c_double) a, fgrM, fgrR, fgrU, aM, aR, aU, tM
 
 !  Waltar and Reynolds model
    if(bup(j) .eq. 0.0d0)then
       fgr = 0.0d0
    else
+!     calculate release fraction for the molten fuel
+      fgrM = 1.0d0
+
 !     calculate release fraction for the restructured fuel
       a = 4.7d0/bup(j) * (1.0d0-dexp(-bup(j)/5.9d0))
       fgrR = max(0.0d0, 1.0d0 - a)
@@ -915,14 +942,27 @@ contains
           if(bup(j) .ge. 49.2d0) a = a*exp(-0.3d0*(bup(j)-49.2d0))
           fgrU = max(0.0, 1.0d0 - a)
       end if
-!     fractional fuel areas associated with restructured zone
+
+!     melting point
+      tM = 3120.0d0 - 388.1d0*pucont - 30.4d0*pucont**2
+
+!     fractional fuel areas associated with molten and restructured zone
+      aM = 0.0d0
       aR = 0.0d0
+      aU = 0.0d0
 !     assume that the temperature 1500 C defines the boundary between unrestructured and restructured zones (Waltar & Reynolds, p.198).
       do i=1,nf
-         if(tem(i,j)-273.15d0 .ge. 1500.0d0)aR = aR + az0(i)
+         if(tem(i,j) .ge. tM-50.d0)then
+            aM = aM + az0(i)
+         else if(tem(i,j)-273.15d0 .ge. 1500.0d0)then
+            aR = aR + az0(i)
+         else
+            aU = aU + az0(i)
+         end if
       end do
-      aR = aR/azf0
-      fgr = (1.0d0 - aR)*fgrU + aR*fgrR
+
+      fgr = (aM*fgrM + aR*fgrR + aU*fgrU)/azf0
+
    end if
    
    return
@@ -1110,7 +1150,7 @@ contains
    fe=1.0d0/(1.0d0/emissf+(rfo0/rci0)*(1.0d0/emissc-1.0d0))
    hgap(2)=sbc*fe*(tf**2+tc**2)*(tf+tc)
 
-   if(flag(j).eq.'open')then
+   if(gstate(j).eq.'open')then
       hgap(3)=0.d0
    else
 !     average cladding temperature
@@ -1478,43 +1518,6 @@ contains
    return
    end function polp
 
-   real(c_double) function polp2(xa,x,y,n,eps) result(ya) bind(C,name='polp2_')
-   integer(c_int) n,i,j
-   real(c_double) xa,x(maxtab),y(maxtab),eps,dx,dydx,dydx_,alfa
-
-   if(xa .lt. x(1))then
-      ya = y(1)
-   else if(xa .gt. x(n))then
-      ya = y(n)
-   else
-!     there are n (x,y) couples and n-1 intervals
-      i = 1
-!     find the interval i in which xa is
-      do
-         if(xa .lt. x(i)) exit
-         i = i + 1
-      end do
-      dydx = (y(i) - y(i-1))/(x(i) - x(i-1))
-      ya = y(i-1) + dydx*(xa-x(i-1))
-      if(xa .lt. x(i-1)+eps)then
-         alfa = (xa - (x(i-1) - eps))/(2.0d0*eps)
-         if(i-1 .gt. 1)then
-            dydx_ = (y(i-1) - y(i-2))/(x(i-1) - x(i-2))
-            ya = alfa*ya + (1.0d0 - alfa)*(y(i-2) + dydx_*(xa-x(i-1)))
-         end if
-      else if(xa .gt. x(i)-eps)then
-         alfa = (xa - (x(i) - eps))/(2.0d0*eps)
-         if(i .eq. n)then
-            dydx_ = 0.0d0
-         else
-            dydx_ = (y(i+1) - y(i))/(x(i+1) - x(i))
-         end if
-         ya = (1.0d0 - alfa)*ya + alfa*(y(i+1) + dydx_*(xa-x(i-1)))
-      end if
-   end if
-
-   end function polp2
-
 !--------------------------------------------------------------------------------------------------
 ! Reads input deck and assigns initial values
 !--------------------------------------------------------------------------------------------------
@@ -1793,7 +1796,7 @@ contains
          rci(j)=rci0
          dzf(j)=dz0(j)
          dzc(j)=dz0(j)
-         flag(j)='open'
+         gstate(j)='open'
       end do
 
       drf0=(rfo0-rfi0)/dfloat(nf-1)
@@ -1927,7 +1930,7 @@ contains
             et(i,j) = et0
          end do
       end do
-!     update geometry and set initial gap conductance
+!     update geometry, set initial gap conductance, and set time of gap closure to infinity
       do j=1,nzz
          call update_geom(j)
          gap(j) = rci(j) - rfo(j)
